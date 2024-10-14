@@ -27,6 +27,9 @@ To authenticate with the Spotify API and obtain a refresh token, follow these st
 3. **Store the Refresh Token:**
    - After successfully running the script, store the refresh token securely. This token will be used in the Lambda function to obtain access tokens for subsequent API calls.
 
+## Credentials - Secrets
+Credentials to properly deploy and test (as well initializing) this project should be inserted by the user. 
+
 ## Example Test Event
 
 To test the Lambda function, you can use the following example event payload:
