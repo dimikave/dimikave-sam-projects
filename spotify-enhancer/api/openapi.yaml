@@ -1,0 +1,98 @@
+openapi: 3.0.1
+info:
+  title: Spotify Enhancer API
+  description: API for enhancing Spotify functionalities
+  version: 1.0.0
+
+paths:
+  /add-to-playlist:
+    post:
+      summary: Add tracks to a Spotify playlist
+      description: This endpoint allows you to add tracks to a Spotify playlist.
+      requestBody:
+        description: JSON payload to specify the playlist name and the tracks to add
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                playlist_name:
+                  type: string
+                  description: Name of the playlist where tracks will be added.
+                  example: My Chill Playlist
+                tracks:
+                  type: array
+                  description: List of tracks to be added to the playlist.
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: The name of the track.
+                        example: Lose Yourself
+                      artist:
+                        type: string
+                        description: The artist of the track.
+                        example: Eminem
+      responses:
+        '200':
+          description: Tracks successfully added to the playlist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added_tracks:
+                    type: integer
+                    description: Number of tracks successfully added to the playlist.
+                    example: 2
+                  playlist_name:
+                    type: string
+                    description: The name of the playlist where tracks were added.
+                    example: My Chill Playlist
+                  not_found_tracks:
+                    type: array
+                    description: Tracks that could not be found on Spotify.
+                    items:
+                      type: string
+                    example:
+                      - Shape of You by Ed Sheeran
+                      - Lose Yourself by Eminem
+        '400':
+          description: No tracks could be added to the playlist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added_tracks:
+                    type: integer
+                    description: Number of tracks successfully added to the playlist.
+                    example: 0
+                  playlist_name:
+                    type: string
+                    description: The name of the playlist where tracks were intended to be added.
+                    example: My Chill Playlist
+                  not_found_tracks:
+                    type: array
+                    description: Tracks that could not be found on Spotify.
+                    items:
+                      type: string
+                    example:
+                      - Unknown Track by Unknown Artist
+
+components:
+  schemas:
+    Track:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the track
+        artist:
+          type: string
+          description: The artist of the track
+      example:
+        name: Lose Yourself
+        artist: Eminem

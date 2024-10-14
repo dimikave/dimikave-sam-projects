@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for the Spotify Enhancer app
+
+Parameters:
+  Stage:
+    Type: String
+    Default: v1
+  LogLevel:
+    Type: String
+    Default: INFO
+
+Globals:
+  Api:
+    OpenApiVersion: 3.0.1
+  Function:
+    MemorySize: 128
+    Timeout: 10
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        LOG_LEVEL: !Ref LogLevel
+
+Resources:
+  SpotifyEnhancerRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub spotify-enhancer-${Stage}
+      Description: API for making calls to the spotify enhancer endpoints
+      StageName: !Ref Stage
+      ApiKeySourceType: HEADER
+      Auth:
+        ApiKeyRequired: true
+      # DefinitionBody:
+      #   Fn::Transform:
+      #     Name: AWS::Include
+      #     Parameters:
+      #       Location: api/openapi.yaml
+  
+  SpotifyEnhancerRestApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn: SpotifyEnhancerRestApiStage
+    Properties:
+      Name: !Sub spotify-enhancer-api-key-${Stage}
+      Description: API Key for the Spotify Enhancer
+      Enabled: true
+      StageKeys:
+      - RestApiId: !Ref SpotifyEnhancerRestApi
+        StageName: !Ref Stage
+  
+  SpotifyEnhancerRestApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: SpotifyEnhancerRestApiStage
+    Properties:
+      UsagePlanName: !Sub spotify-enhancer-usage-plan-${Stage}
+      Description: Usage plan for the Spotify Enhancer
+      ApiStages:
+      - ApiId: !Ref SpotifyEnhancerRestApi
+        Stage: !Ref Stage
+
+  SpotifyEnhancerRestApiUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref SpotifyEnhancerRestApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref SpotifyEnhancerRestApiUsagePlan
+
+  PostPlaylistAdditionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub post-playlist-additions-${Stage}
+      CodeUri: post-playlist-additions-api/src/
+      Handler: post_playlist_additions.lambda_handler
+      Environment:
+        Variables:
+          SPOTIFY_CLIENT_ID: '<CLIENT_ID>'
+          SPOTIFY_CLIENT_SECRET: '<CLIENT_SECRET>'
+          SPOTIFY_REDIRECT_URI: 'http://localhost:3000'
+          SPOTIFY_REFRESH_TOKEN: '<SPOTIFY_REFRESH_TOKEN>'
+      Events:
+        SpotifyPlaylistAdder:
+          Type: Api
+          Properties:
+            RestApiId: !Ref SpotifyEnhancerRestApi
+            Path: /add-to-playlist
+            Method: post
+      #Policies:
+
+  PostPlaylistAdditionsFunctionCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/post-playlist-additions-${Stage}
+      RetentionInDays: 14
+      
+Outputs:
+  SpotifyPlaylistAdderApi:
+    Description: "API Gateway endpoint URL for Spotify Playlist Adder function"
+    Value: !Sub "https://${SpotifyEnhancerRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/add-to-playlist/"
+  # PostPlaylistAdditionsFunction:
+  #   Description: "Spotify Playlist Adder Lambda Function ARN"
+  #   Value: !GetAtt PostPlaylistAdditionsFunction.Arn
