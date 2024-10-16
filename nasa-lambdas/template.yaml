@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Stack containing lambdas integrating with NASA API and related resources - Sendgrid Integration
+
+Parameters:
+  Stage:
+    Type: String
+    Default: v1
+  LogLevel:
+    Type: String
+    Default: INFO
+
+Globals:
+  Function:
+    MemorySize: 128
+    Timeout: 10
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        LOG_LEVEL: !Ref LogLevel
+
+
+Resources:
+#  SendApodEmailFunction:
+#    Type: AWS::Serverless::Function
+#    Properties:
+#      FunctionName: !Sub send-apod-email-${Stage}
+#      CodeUri: send-apod-email/src/
+#      Handler: send_apod_email.lambda_handler
+#      Environment:
+#        Variables:
+#          NASA_API_KEY: '<NASA_API_KEY>'
+#          SENDER_EMAIL: '<SENDER>'
+#          RECIPIENTS: '<RECIPIENT>' # add more like "email1@gmail.com,email2@gmail.com"
+#      Policies:
+#        - AmazonSESFullAccess
+#      Events:
+#        ApodEmailEvent:
+#          Type: Schedule
+#          Properties:
+#            Schedule: cron(0 9 * * ? *)  # Runs daily at 9:00 UTC - 1 pm in Athens
+
+  SendgridSendApodEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub sendgrid-send-apod-email-${Stage}
+      CodeUri: sendgrid-send-apod-email/src/
+      Handler: sendgrid_send_apod_email.lambda_handler
+      Environment:
+        Variables:
+          NASA_API_KEY: '<NASA_API_KEY>'
+          SENDER_EMAIL: '<SENDER>'
+          RECIPIENTS: '<RECIPIENTS>' # add more like "email1@gmail.com,email2@gmail.com"
+      Events:
+        ApodEmailEvent:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 9 * * ? *)  # Runs daily at 9:00 UTC - 1 pm in Athens
+
+  SendgridSendApodEmailFunctionCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/sendgrid-send-apod-email-${Stage}
+      RetentionInDays: 14
+
+#  SendApodEmailFunctionCloudWatchLogGroup:
+#    Type: AWS::Logs::LogGroup
+#    Properties:
+#      LogGroupName: !Sub /aws/lambda/send-apod-email-${Stage}
+#      RetentionInDays: 14
