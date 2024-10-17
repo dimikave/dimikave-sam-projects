@@ -32,6 +32,7 @@ def calculate_day_counter():
     day_count = (current_date - start_date).days + 1  # +1 to start counting from Day 1
     return day_count
 
+## TODO Make the 2 following functions fetching their content dynamically by another source.
 # Function to generate mysterious content
 def get_mysterious_content():
     return (
@@ -54,7 +55,7 @@ def get_data(api_key):
     return response
 
 # Function to extract title, url, and explanation
-def get_title(response):
+def get_title(response): 
     return response["title"]
 
 def get_url(response):

@@ -130,12 +130,8 @@ def lambda_handler(event, context):
         # Get the NASA API key from environment variables
         nasa_api_key = os.environ['NASA_API_KEY']
 
-        if event['recipients']:
-            recipients = event['recipients']  # A list of email addresses
-        else:
-            # Get the list of recipients from the event object
-            recipients = os.environ['RECIPIENTS'].split(',')  # Converts string to list
-
+        print(os.environ['RECIPIENTS'])
+        recipients = os.environ['RECIPIENTS'].split(',')  # Converts string to list
 
         # Fetch the APOD data
         apod_data = get_data(nasa_api_key)
