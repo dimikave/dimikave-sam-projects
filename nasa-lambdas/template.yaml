@@ -52,12 +52,23 @@ Resources:
         Variables:
           NASA_API_KEY: '<NASA_API_KEY>'
           SENDER_EMAIL: '<SENDER>'
-          RECIPIENTS: '<RECIPIENTS>' # add more like "email1@gmail.com,email2@gmail.com"
+          SENDGRID_API_KEY: '<SENDGRID_API_KEY>'
+          S3_BUCKET: 'sendgrid-recipients'  # Name of the S3 bucket where the recipients list is stored
+          S3_FILE_KEY: 'recipients.json'  # Path to the file in S3 containing the recipient list
       Events:
         ApodEmailEvent:
           Type: Schedule
           Properties:
             Schedule: cron(0 9 * * ? *)  # Runs daily at 9:00 UTC - 1 pm in Athens
+
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource:
+                - arn:aws:s3:::sendgrid-recipients/recipients.json  # Permissions for specific S3 object (recipients file)
+
 
   SendgridSendApodEmailFunctionCloudWatchLogGroup:
     Type: AWS::Logs::LogGroup

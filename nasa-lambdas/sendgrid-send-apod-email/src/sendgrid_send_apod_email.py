@@ -1,10 +1,16 @@
+import logging
 import os
 import json
 from datetime import datetime
+
+import boto3
 import requests
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+
+# Initialize S3 client
+s3 = boto3.client('s3')
 
 # Predefined list of greetings
 greetings_list = [
@@ -109,6 +115,19 @@ def generate_email_template(greeting, title, url, explanation, mysterious_conten
 </html>
 """
 
+# Function to fetch recipients from S3
+def get_recipients_from_s3(bucket_name, file_key):
+    """Fetch the recipients list from an S3 file."""
+    try:
+        response = s3.get_object(Bucket=bucket_name, Key=file_key)
+        content = response['Body'].read().decode('utf-8')
+        recipients_data = json.loads(content)
+        return recipients_data.get('recipients', [])
+    except Exception as e:
+        logging.info(f"Error fetching recipients from S3: {e}")
+        return []
+
+
 # Function to send an email using SES
 def send_email_sendgrid(sender, recipients, subject, html_body):
     """Send an email using SendGrid."""
@@ -130,8 +149,15 @@ def lambda_handler(event, context):
         # Get the NASA API key from environment variables
         nasa_api_key = os.environ['NASA_API_KEY']
 
-        print(os.environ['RECIPIENTS'])
-        recipients = os.environ['RECIPIENTS'].split(',')  # Converts string to list
+        # Get the S3 bucket and file key from environment variables
+        s3_bucket_name = os.environ['S3_BUCKET']
+        s3_file_key = os.environ['S3_FILE_KEY']
+
+        # Fetch the recipients list from S3
+        recipients = get_recipients_from_s3(s3_bucket_name, s3_file_key)
+
+        logging.info("Recipients")
+        logging.info(recipients)
 
         # Fetch the APOD data
         apod_data = get_data(nasa_api_key)
@@ -162,7 +188,7 @@ def lambda_handler(event, context):
             }
 
     except Exception as e:
-        print(f"Error: {e}")
+        logging.info(f"Error: {e}")
         return {
             'statusCode': 500,
             'body': json.dumps(f"Error: {e}")
