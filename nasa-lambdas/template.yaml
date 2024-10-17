@@ -13,7 +13,7 @@ Parameters:
 Globals:
   Function:
     MemorySize: 128
-    Timeout: 10
+    Timeout: 30
     Runtime: python3.12
     Architectures:
       - x86_64
@@ -42,16 +42,29 @@ Resources:
 #          Properties:
 #            Schedule: cron(0 9 * * ? *)  # Runs daily at 9:00 UTC - 1 pm in Athens
 
+#  SendgridSendApodEmailFunctionLayer:
+#    Type: AWS::Serverless::LayerVersion
+#    Properties:
+#      LayerName: SendgridSendApodEmailFunctionLayer
+#      Description: "A Lambda Layer for sendgrid-send-apod-email lambda"
+#      ContentUri: ./layer/  # This points to the directory where the python dependencies are stored
+#      CompatibleRuntimes:
+#        - python3.12  # Make sure this matches your Lambda runtime
+#      RetentionPolicy: Delete  # You can retain or delete older versions
+
   SendgridSendApodEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub sendgrid-send-apod-email-${Stage}
       CodeUri: sendgrid-send-apod-email/src/
       Handler: sendgrid_send_apod_email.lambda_handler
+#      Layers:
+#        - !Ref SendgridSendApodEmailFunctionLayer
       Environment:
         Variables:
           NASA_API_KEY: '<NASA_API_KEY>'
           SENDER_EMAIL: '<SENDER>'
+          OPENAI_API_KEY: '<OPENAI_API_KEY>'
           SENDGRID_API_KEY: '<SENDGRID_API_KEY>'
           S3_BUCKET: 'sendgrid-recipients'  # Name of the S3 bucket where the recipients list is stored
           S3_FILE_KEY: 'recipients.json'  # Path to the file in S3 containing the recipient list

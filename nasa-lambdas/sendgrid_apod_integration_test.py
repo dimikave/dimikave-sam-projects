@@ -17,13 +17,15 @@ greetings_list = [
     "Hello, Cosmic Wanderer!",
     "Greetings, Interstellar Dreamer!",
     "Welcome, Universe Seeker!",
-    "Salutations, Orbiting Observer!"
+    "Salutations, Orbiting Observer!",
 ]
+
 
 # Function to get the greeting based on the day counter
 def get_greeting_by_day(day_count):
     index = (day_count - 1) % len(greetings_list)  # Using day_count - 1 for 0-based index
     return greetings_list[index]
+
 
 # Function to calculate the day counter
 def calculate_day_counter():
@@ -31,6 +33,7 @@ def calculate_day_counter():
     current_date = datetime.now()
     day_count = (current_date - start_date).days + 1  # +1 to start counting from Day 1
     return day_count
+
 
 ## TODO Make the 2 following functions fetching their content dynamically by another source.
 # Function to generate mysterious content
@@ -41,6 +44,7 @@ def get_mysterious_content():
         "The mysteries of space are endless, and each image unveils a story waiting to be discovered."
     )
 
+
 # Function to generate a space fact
 def get_space_fact():
     return (
@@ -48,15 +52,18 @@ def get_space_fact():
         "It takes 243 Earth days to rotate once on its axis but only 225 Earth days to complete an orbit around the Sun."
     )
 
+
 # Function to get NASA APOD data
 def get_data(api_key):
     raw_response = requests.get(f"https://api.nasa.gov/planetary/apod?api_key={api_key}").text
     response = json.loads(raw_response)
     return response
 
+
 # Function to extract title, url, and explanation
-def get_title(response): 
+def get_title(response):
     return response["title"]
+
 
 def get_url(response):
     return response["url"]
@@ -106,8 +113,10 @@ def generate_email_template(greeting, title, url, explanation, mysterious_conten
 </html>
 """
 
+
 def get_explanation(response):
     return response["explanation"]
+
 
 # Main test function
 # Main test function
@@ -153,6 +162,7 @@ def main():
 
     except Exception as e:
         print(f"Error: {e}")
+
 
 # Run the test script
 if __name__ == "__main__":

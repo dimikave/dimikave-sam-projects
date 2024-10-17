@@ -10,7 +10,7 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 # Initialize S3 client
-s3 = boto3.client('s3')
+s3 = boto3.client("s3")
 
 # Predefined list of greetings
 greetings_list = [
@@ -23,13 +23,15 @@ greetings_list = [
     "Hello, Cosmic Wanderer!",
     "Greetings, Interstellar Dreamer!",
     "Welcome, Universe Seeker!",
-    "Salutations, Orbiting Observer!"
+    "Salutations, Orbiting Observer!",
 ]
+
 
 # Function to get the greeting based on the day counter
 def get_greeting_by_day(day_count):
     index = (day_count - 1) % len(greetings_list)  # Using day_count - 1 for 0-based index
     return greetings_list[index]
+
 
 # Function to calculate the day counter
 def calculate_day_counter():
@@ -38,20 +40,6 @@ def calculate_day_counter():
     day_count = (current_date - start_date).days + 1  # +1 to start counting from Day 1
     return day_count
 
-# Function to generate mysterious content
-def get_mysterious_content():
-    return (
-        "As you gaze upon today’s cosmic masterpiece, ponder the vastness of our universe. "
-        "Did you know that there are more stars in the universe than grains of sand on all the beaches on Earth? "
-        "The mysteries of space are endless, and each image unveils a story waiting to be discovered."
-    )
-
-# Function to generate a space fact
-def get_space_fact():
-    return (
-        "Did you know? A day on Venus is longer than a year on Venus! "
-        "It takes 243 Earth days to rotate once on its axis but only 225 Earth days to complete an orbit around the Sun."
-    )
 
 # Function to get NASA APOD data
 def get_data(api_key):
@@ -59,12 +47,15 @@ def get_data(api_key):
     response = json.loads(raw_response)
     return response
 
+
 # Function to extract title, url, and explanation
 def get_title(response):
     return response["title"]
 
+
 def get_url(response):
     return response["url"]
+
 
 def get_explanation(response):
     return response["explanation"]
@@ -99,7 +90,7 @@ def generate_email_template(greeting, title, url, explanation, mysterious_conten
                  <span style="color: #ffffff;">{explanation}</span>
                 </div>
                 <div style="background-color: #2a2a6a; border-left: 4px solid #00ffff; padding: 15px; margin: 15px 0;">
-                    <strong style="color: #00ffff;">Fact of the Day:</strong> 
+                    <strong style="color: #00ffff;">Did you know?</strong> 
                     <span style="color: #ffffff;">{space_fact}</span>
                 </div>
                 <p style="color: #ffffff;">Embark on this cosmic journey and find the image history on <a href="https://apod.nasa.gov/apod/archivepix.html" style="color: #00ffff; text-decoration: none;">NASA APOD archive</a>.</p>
@@ -115,14 +106,53 @@ def generate_email_template(greeting, title, url, explanation, mysterious_conten
 </html>
 """
 
+
+# Function to make a direct HTTP call to the OpenAI API
+def generate_content_from_gpt4(prompt, model="gpt-4", max_tokens=100):
+    """
+    Makes a direct API call to OpenAI using the requests library.
+
+    Args:
+        prompt (str): The prompt to send to GPT-4.
+        model (str): The GPT model to use (e.g., "gpt-4").
+        max_tokens (int): The maximum number of tokens to generate.
+
+    Returns:
+        str: The generated text from GPT-4.
+    """
+    api_key = os.environ["OPENAI_API_KEY"]
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    data = {"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
+
+    # Make the HTTP request to OpenAI API
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+
+    if response.status_code == 200:
+        return response.json()["choices"][0]["message"]["content"].strip()
+    else:
+        raise Exception(f"Failed to call OpenAI API: {response.status_code} - {response.text}")
+
+
+# Function to get mysterious content using the generalized GPT-4 function
+def get_mysterious_content_from_gpt4():
+    prompt = "Generate a mysterious and atmospheric description about space exploration and the universe"
+    return generate_content_from_gpt4(prompt)
+
+
+# Function to get space fact using the generalized GPT-4 function
+def get_space_fact_from_gpt4():
+    prompt = "Provide an interesting and accurate fact about space or astronomy."
+    return generate_content_from_gpt4(prompt)
+
+
 # Function to fetch recipients from S3
 def get_recipients_from_s3(bucket_name, file_key):
     """Fetch the recipients list from an S3 file."""
     try:
         response = s3.get_object(Bucket=bucket_name, Key=file_key)
-        content = response['Body'].read().decode('utf-8')
+        content = response["Body"].read().decode("utf-8")
         recipients_data = json.loads(content)
-        return recipients_data.get('recipients', [])
+        return recipients_data.get("recipients", [])
     except Exception as e:
         logging.info(f"Error fetching recipients from S3: {e}")
         return []
@@ -147,11 +177,11 @@ def send_email_sendgrid(sender, recipients, subject, html_body):
 def lambda_handler(event, context):
     try:
         # Get the NASA API key from environment variables
-        nasa_api_key = os.environ['NASA_API_KEY']
+        nasa_api_key = os.environ["NASA_API_KEY"]
 
         # Get the S3 bucket and file key from environment variables
-        s3_bucket_name = os.environ['S3_BUCKET']
-        s3_file_key = os.environ['S3_FILE_KEY']
+        s3_bucket_name = os.environ["S3_BUCKET"]
+        s3_file_key = os.environ["S3_FILE_KEY"]
 
         # Fetch the recipients list from S3
         recipients = get_recipients_from_s3(s3_bucket_name, s3_file_key)
@@ -166,31 +196,21 @@ def lambda_handler(event, context):
         greeting = get_greeting_by_day(day_counter)
         title = get_title(apod_data)
         explanation = get_explanation(apod_data)
-        mysterious_content = get_mysterious_content()
-        space_fact = get_space_fact()
+        mysterious_content = get_mysterious_content_from_gpt4()
+        space_fact = get_space_fact_from_gpt4()
 
         # Prepare email content
-        sender = os.environ['SENDER_EMAIL']  # Sender email must be verified in SES
+        sender = os.environ["SENDER_EMAIL"]  # Sender email must be verified in SES
         subject = f"Cosmic Journey - Day {day_counter}: Today's NASA Astronomy Picture of the Day!"
 
         # Prepare email content using the HTML template
         html_body = generate_email_template(greeting, title, url, explanation, mysterious_content, space_fact)
         # Send the email via SES
         if send_email_sendgrid(sender, recipients, subject, html_body):
-            return {
-                'statusCode': 200,
-                'body': json.dumps('Emails sent successfully!')
-            }
+            return {"statusCode": 200, "body": json.dumps("Emails sent successfully!")}
         else:
-            return {
-                'statusCode': 500,
-                'body': json.dumps('Failed to send emails')
-            }
+            return {"statusCode": 500, "body": json.dumps("Failed to send emails")}
 
     except Exception as e:
         logging.info(f"Error: {e}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps(f"Error: {e}")
-        }
-
+        return {"statusCode": 500, "body": json.dumps(f"Error: {e}")}
