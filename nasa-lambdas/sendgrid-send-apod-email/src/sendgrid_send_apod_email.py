@@ -135,7 +135,8 @@ def generate_content_from_gpt4(prompt, model="gpt-4", max_tokens=100):
 
 # Function to get mysterious content using the generalized GPT-4 function
 def get_mysterious_content_from_gpt4():
-    prompt = "Generate a mysterious and atmospheric description about space exploration and the universe"
+    prompt = "Generate a mysterious and atmospheric description\
+     about space exploration and the universe using around 50 words"
     return generate_content_from_gpt4(prompt)
 
 
