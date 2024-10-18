@@ -159,7 +159,7 @@ def get_recipients_from_s3(bucket_name, file_key):
         return []
 
 
-# Function to send an email using SES
+# Function to send an email using sendgrid
 def send_email_sendgrid(sender, recipients, subject, html_body):
     """Send an email using SendGrid."""
     message = Mail(
@@ -206,7 +206,7 @@ def lambda_handler(event, context):
 
         # Prepare email content using the HTML template
         html_body = generate_email_template(greeting, title, url, explanation, mysterious_content, space_fact)
-        # Send the email via SES
+        # Send the email via Sendgrid
         if send_email_sendgrid(sender, recipients, subject, html_body):
             return {"statusCode": 200, "body": json.dumps("Emails sent successfully!")}
         else:
