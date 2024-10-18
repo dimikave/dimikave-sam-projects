@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Philosophy related projects
+
+Parameters:
+  Stage:
+    Type: String
+    Default: v1
+  LogLevel:
+    Type: String
+    Default: INFO
+
+Globals:
+  Function:
+    MemorySize: 128
+    Timeout: 90
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        LOG_LEVEL: !Ref LogLevel
+
+
+Resources:
+  PhilosophyOTDEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub philosophy-otd-email-${Stage}
+      CodeUri: philosophy-otd-email/src/
+      Handler: philosophy_otd_email.lambda_handler
+      Environment:
+        Variables:
+          S3_RECIPIENTS_BUCKET: 'sendgrid-recipients'
+          S3_RECIPIENTS_FILE_KEY: 'recipients.json'
+          S3_PHILOSOPHERS_BUCKET: 'philosophy-bucket'
+          S3_PHILOSOPHERS_FILE_KEY: 'philosophers.json'
+          OPENAI_API_KEY: '<OPENAI_API_KEY>'
+          SENDGRID_API_KEY: '<SENDGRID_API_KEY>'
+          SENDER_EMAIL: '<SENDER_EMAIL>' # Path to the file in S3 containing the recipient list
+      Events:
+        PhilosophyOtdEmailEvent:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 17 * * ? *)  # Runs daily at 17:00 UTC - 8:00 pm in Athen
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+              Resource:
+                - arn:aws:s3:::sendgrid-recipients/recipients.json
+                - arn:aws:s3:::philosophy-bucket/philosophers.json
+
+  PhilosophyOTDEmailFunctionCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/philosophy-otd-email-${Stage}
+      RetentionInDays: 14

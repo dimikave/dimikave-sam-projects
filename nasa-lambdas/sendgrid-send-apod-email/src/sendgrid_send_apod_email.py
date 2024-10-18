@@ -1,167 +1,115 @@
-import logging
 import os
 import json
-from datetime import datetime
+import logging
 
 import boto3
 import requests
-
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
+from sendgrid_apod_email_utils import (
+    get_greeting_by_day,
+    get_title,
+    get_url,
+    get_explanation,
+    calculate_day_counter,
+)
+from sendgrid_email_templates import generate_email_template
+import sendgrid_apod_email_constants as c
+from sendgrid_apod_email_enumerations import GPTKeys, S3Keys
+
 # Initialize S3 client
 s3 = boto3.client("s3")
+logger = logging.getLogger(__name__)
+# Ensure that the log level is set at the right level (in this case INFO)
+logger.setLevel(logging.INFO)
 
-# Predefined list of greetings
-greetings_list = [
-    "Greetings, Cosmic Explorer!",
-    "Hello, Star Traveler!",
-    "Dear Astral Adventurer!",
-    "Welcome, Space Enthusiast!",
-    "Salutations, Celestial Voyager!",
-    "Hi, Galactic Traveler!",
-    "Hello, Cosmic Wanderer!",
-    "Greetings, Interstellar Dreamer!",
-    "Welcome, Universe Seeker!",
-    "Salutations, Orbiting Observer!",
-]
+# Add a handler only if none exist (this step may not be required, but it's good practice)
+if not logger.handlers:
+    handler = logging.StreamHandler()  # Logs to stdout (which Lambda captures and sends to CloudWatch)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
-# Function to get the greeting based on the day counter
-def get_greeting_by_day(day_count):
-    index = (day_count - 1) % len(greetings_list)  # Using day_count - 1 for 0-based index
-    return greetings_list[index]
-
-
-# Function to calculate the day counter
-def calculate_day_counter():
-    start_date = datetime(2024, 10, 17)
-    current_date = datetime.now()
-    day_count = (current_date - start_date).days + 1  # +1 to start counting from Day 1
-    return day_count
-
-
-# Function to get NASA APOD data
-def get_data(api_key):
-    raw_response = requests.get(f"https://api.nasa.gov/planetary/apod?api_key={api_key}").text
-    response = json.loads(raw_response)
-    return response
-
-
-# Function to extract title, url, and explanation
-def get_title(response):
-    return response["title"]
-
-
-def get_url(response):
-    return response["url"]
-
-
-def get_explanation(response):
-    return response["explanation"]
-
-
-# Function to generate the email HTML template
-def generate_email_template(greeting, title, url, explanation, mysterious_content, space_fact):
-    """Generate an HTML email template for NASA's APOD."""
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NASA's Astronomy Picture of the Day</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #0a0a2a; color: #ffffff;">
-    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #1a1a4a;">
-        <tr>
-            <td style="padding: 20px; text-align: center; background-color: #1a237e;">
-                <h1 style="margin: 0; font-size: 24px; color: #ffffff;">NASA's Astronomy Picture of the Day</h1>
-            </td>
-        </tr>
-        <tr>
-            <td style="padding: 20px;">
-                <h2 style="color: #ffffff;">{greeting}</h2>
-                <h3 style="color: #00ffff;">{title}</h3>
-                <img src="{url}" alt="{title}" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
-                <p style="color: #af2f6f;">{mysterious_content}</p>
-                <div style="background-color: #2a2a6a; border-left: 4px solid #00ffff; padding: 15px; margin: 15px 0;">
-                <strong style="color: #00ffff;">Picture of the day description:</strong>
-                 <span style="color: #ffffff;">{explanation}</span>
-                </div>
-                <div style="background-color: #2a2a6a; border-left: 4px solid #00ffff; padding: 15px; margin: 15px 0;">
-                    <strong style="color: #00ffff;">Did you know?</strong> 
-                    <span style="color: #ffffff;">{space_fact}</span>
-                </div>
-                <p style="color: #ffffff;">Embark on this cosmic journey and find the image history on <a href="https://apod.nasa.gov/apod/archivepix.html" style="color: #00ffff; text-decoration: none;">NASA APOD archive</a>.</p>
-            </td>
-        </tr>
-        <tr>
-            <td style="padding: 20px; text-align: center; background-color: #1a237e; color: #ffffff;">
-                <p style="margin: 0; font-size: 14px;">&copy; Brought to you by your cosmic white nigga Dimitris Kavelidis</p>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
-"""
-
-
-# Function to make a direct HTTP call to the OpenAI API
-def generate_content_from_gpt4(prompt, model="gpt-4", max_tokens=100):
+def generate_content_from_gpt4(prompt: str, model: str = c.GPT_MODEL, max_tokens: int = 100) -> str:
     """
-    Makes a direct API call to OpenAI using the requests library.
+    Generates content using GPT-4 via a direct API call.
 
-    Args:
-        prompt (str): The prompt to send to GPT-4.
-        model (str): The GPT model to use (e.g., "gpt-4").
-        max_tokens (int): The maximum number of tokens to generate.
+    :param prompt: str: The prompt to send to GPT-4.
+    :param model: str: The GPT model to use (default: "gpt-4").
+    :param max_tokens: int: Maximum number of tokens to generate (default: 100).
 
-    Returns:
-        str: The generated text from GPT-4.
+    :return: str: Generated text from GPT-4.
+
+    :raises: Exception: If the API call fails.
     """
-    api_key = os.environ["OPENAI_API_KEY"]
+    api_key = os.environ[c.OPENAI_API_KEY]
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    data = {"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
+    data = {
+        GPTKeys.MODEL.value: model,
+        GPTKeys.MESSAGES.value: [{GPTKeys.ROLE.value: GPTKeys.USER.value, GPTKeys.CONTENT.value: prompt}],
+        GPTKeys.MAX_TOKENS.value: max_tokens,
+    }
 
-    # Make the HTTP request to OpenAI API
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+    response = requests.post(url=c.GPT_COMPLETIONS_URL, headers=headers, json=data)
 
     if response.status_code == 200:
-        return response.json()["choices"][0]["message"]["content"].strip()
+        return response.json()[GPTKeys.CHOICES.value][0][GPTKeys.MESSAGE.value][GPTKeys.CONTENT.value].strip()
     else:
         raise Exception(f"Failed to call OpenAI API: {response.status_code} - {response.text}")
 
 
-# Function to get mysterious content using the generalized GPT-4 function
-def get_mysterious_content_from_gpt4():
-    prompt = "Generate a mysterious and atmospheric description\
-     about space exploration and the universe using around 50 words"
+def get_mysterious_content_from_gpt4() -> str:
+    """
+    Generates mysterious content about space exploration using GPT-4.
+
+    :return: str: Generated mysterious content.
+    """
+    prompt = "Generate a mysterious and atmospheric description about space exploration and the universe using around 50 words"
     return generate_content_from_gpt4(prompt)
 
 
-# Function to get space fact using the generalized GPT-4 function
-def get_space_fact_from_gpt4():
+def get_space_fact_from_gpt4() -> str:
+    """
+    Generates an interesting space fact using GPT-4.
+
+    :return: str: Generated space fact.
+    """
     prompt = "Provide an interesting and accurate fact about space or astronomy."
     return generate_content_from_gpt4(prompt)
 
 
-# Function to fetch recipients from S3
-def get_recipients_from_s3(bucket_name, file_key):
-    """Fetch the recipients list from an S3 file."""
+def get_recipients_from_s3(bucket_name: str, file_key: str) -> list:
+    """
+    Fetches the recipients list from an S3 file.
+
+    :param bucket_name: str: Name of the S3 bucket.
+    :param file_key: str: Key of the file in the S3 bucket.
+
+    :return: list: List of recipient email addresses.
+    """
     try:
         response = s3.get_object(Bucket=bucket_name, Key=file_key)
-        content = response["Body"].read().decode("utf-8")
+        content = response[S3Keys.BODY.value].read().decode(S3Keys.UTF_8.value)
         recipients_data = json.loads(content)
-        return recipients_data.get("recipients", [])
+        return recipients_data.get(S3Keys.RECIPIENTS_KEY.value, [])
     except Exception as e:
-        logging.info(f"Error fetching recipients from S3: {e}")
+        logger.info(f"Error fetching recipients from S3: {e}")
         return []
 
 
-# Function to send an email using SES
-def send_email_sendgrid(sender, recipients, subject, html_body):
-    """Send an email using SendGrid."""
+def send_email_sendgrid(sender: str, recipients: list, subject: str, html_body: str) -> bool:
+    """
+    Sends an email using SendGrid.
+
+    :param sender: str: Sender's email address.
+    :param recipients: list: List of recipient email addresses.
+    :param subject: str: Email subject.
+    :param html_body: str: HTML content of the email.
+
+    :return: bool: True if the email was sent successfully, False otherwise.
+    """
     message = Mail(
         from_email=sender,
         to_emails=recipients,
@@ -169,29 +117,53 @@ def send_email_sendgrid(sender, recipients, subject, html_body):
         html_content=html_body,
     )
 
-    sg = SendGridAPIClient(os.environ["SENDGRID_API_KEY"])
-    response = sg.send(message)
-    return response
-
-
-# Lambda handler function
-def lambda_handler(event, context):
     try:
-        # Get the NASA API key from environment variables
-        nasa_api_key = os.environ["NASA_API_KEY"]
+        sg = SendGridAPIClient(os.environ[c.SENDGRID_API_KEY])
+        response = sg.send(message)
+        return response.status_code == 202
+    except Exception as e:
+        logger.error(f"Error sending email via SendGrid: {e}")
+        return False
 
-        # Get the S3 bucket and file key from environment variables
-        s3_bucket_name = os.environ["S3_BUCKET"]
-        s3_file_key = os.environ["S3_FILE_KEY"]
+
+def get_data(api_key: str) -> dict:
+    """
+    Fetch NASA APOD data using the provided API key.
+
+    :param api_key: str: NASA API key.
+
+    :return: dict: JSON response from the NASA APOD API.
+    """
+    raw_response = requests.get(f"https://api.nasa.gov/planetary/apod?api_key={api_key}").text
+
+    return json.loads(raw_response)
+
+
+def lambda_handler(event, context):
+    """
+    AWS Lambda handler function for sending NASA APOD emails.
+
+    :param event: dict: AWS Lambda event data.
+    :param context: object: AWS Lambda context object.
+
+    :returns dict: Response containing statusCode and body.
+    """
+    try:
+        # Get environment variables
+        nasa_api_key = os.environ[c.NASA_API_KEY]
+        s3_bucket_name = os.environ[c.S3_BUCKET]
+        s3_file_key = os.environ[c.S3_FILE_KEY]
+        sender = os.environ[c.SENDER_EMAIL]
 
         # Fetch the recipients list from S3
         recipients = get_recipients_from_s3(s3_bucket_name, s3_file_key)
 
-        logging.info("Recipients")
-        logging.info(recipients)
+        logger.info(S3Keys.RECIPIENTS_KEY.value)
+        logger.info(recipients)
 
         # Fetch the APOD data
         apod_data = get_data(nasa_api_key)
+        logger.info(apod_data)
         url = get_url(apod_data)
         day_counter = calculate_day_counter()
         greeting = get_greeting_by_day(day_counter)
@@ -201,17 +173,15 @@ def lambda_handler(event, context):
         space_fact = get_space_fact_from_gpt4()
 
         # Prepare email content
-        sender = os.environ["SENDER_EMAIL"]  # Sender email must be verified in SES
         subject = f"Cosmic Journey - Day {day_counter}: Today's NASA Astronomy Picture of the Day!"
-
-        # Prepare email content using the HTML template
         html_body = generate_email_template(greeting, title, url, explanation, mysterious_content, space_fact)
-        # Send the email via SES
+
+        # Send the email via Sendgrid
         if send_email_sendgrid(sender, recipients, subject, html_body):
-            return {"statusCode": 200, "body": json.dumps("Emails sent successfully!")}
+            return c.SUCCESS_RESPONSE
         else:
-            return {"statusCode": 500, "body": json.dumps("Failed to send emails")}
+            return c.FAILURE_RESPONSE
 
     except Exception as e:
-        logging.info(f"Error: {e}")
-        return {"statusCode": 500, "body": json.dumps(f"Error: {e}")}
+        logger.error(f"Error: {e}")
+        return c.FAILURE_RESPONSE

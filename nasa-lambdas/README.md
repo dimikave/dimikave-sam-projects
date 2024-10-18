@@ -78,7 +78,6 @@ sam remote invoke --stack-name nasa-lambdas SendgridSendApodEmailFunction --even
 ```
 
 ## Note:
-In `nasa-lambdas` you will also find the same implementation (a little bit outdated)
-for the same functionality but sending the email with AWS Simple Email Service (SES) instead.
+Could have achieved the same functionality by sending the email with AWS Simple Email Service (SES) instead.
 However, it was noticed that there was a considerable delay when the email was sent with SES in contrast to SendGrid,
-so this lambda is not deployed/used.
+so this why this integration was used. 
