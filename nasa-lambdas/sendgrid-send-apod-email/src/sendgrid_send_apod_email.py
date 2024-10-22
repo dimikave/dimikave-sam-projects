@@ -20,6 +20,8 @@ from sendgrid_apod_email_enumerations import GPTKeys, S3Keys
 
 # Initialize S3 client
 s3 = boto3.client("s3")
+
+# TODO Add shared package for logger and GPT
 logger = logging.getLogger(__name__)
 # Ensure that the log level is set at the right level (in this case INFO)
 logger.setLevel(logging.INFO)
