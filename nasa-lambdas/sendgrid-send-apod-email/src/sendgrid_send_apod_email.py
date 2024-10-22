@@ -29,7 +29,7 @@ logger.setLevel(logging.INFO)
 # Add a handler only if none exist (this step may not be required, but it's good practice)
 if not logger.handlers:
     handler = logging.StreamHandler()  # Logs to stdout (which Lambda captures and sends to CloudWatch)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
