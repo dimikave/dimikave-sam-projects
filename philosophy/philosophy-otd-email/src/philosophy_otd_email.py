@@ -1,4 +1,3 @@
-import logging
 import os
 import json
 import random
@@ -9,9 +8,11 @@ import requests
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
+from auxiliary_tools.environment_utils import EnvironmentUtils
+
 # Initialize S3 client
 s3 = boto3.client("s3")
-
+logger = EnvironmentUtils.get_logger()
 
 # Function to calculate the day counter starting from 2024-10-17
 def calculate_day_counter():
@@ -181,7 +182,7 @@ def fetch_from_s3(bucket_name, file_key):
         response = s3.get_object(Bucket=bucket_name, Key=file_key)
         return json.loads(response["Body"].read().decode("utf-8"))
     except Exception as e:
-        logging.error(f"Error fetching data from S3: {e}")
+        logger.error(f"Error fetching data from S3: {e}")
         raise
 
 
@@ -190,7 +191,7 @@ def update_in_s3(bucket_name, file_key, data):
     try:
         s3.put_object(Bucket=bucket_name, Key=file_key, Body=json.dumps(data), ContentType="application/json")
     except Exception as e:
-        logging.error(f"Error updating data in S3: {e}")
+        logger.error(f"Error updating data in S3: {e}")
         raise
 
 
@@ -207,7 +208,7 @@ def send_email_sendgrid(sender, recipients, subject, html_body):
         response = sg.send(message)
         return response.status_code == 202  # Return True if the email was sent successfully
     except Exception as e:
-        logging.error(f"Failed to send email via SendGrid: {e}")
+        logger.error(f"Failed to send email via SendGrid: {e}")
         return False
 
 
@@ -229,11 +230,11 @@ def lambda_handler(event, context):
         philosophers = philosophers_data.get("philosophers", [])
 
         if not recipients:
-            logging.warning("No recipients found.")
+            logger.warning("No recipients found.")
             return {"statusCode": 400, "body": json.dumps("No recipients found")}
 
         if not philosophers:
-            logging.warning("No philosophers found.")
+            logger.warning("No philosophers found.")
             return {"statusCode": 400, "body": json.dumps("No philosophers found")}
 
         # Generate email content and get the philosopher
@@ -244,14 +245,14 @@ def lambda_handler(event, context):
         # Send the email via SendGrid
         if send_email_sendgrid(sender, recipients, subject, content):
             # Remove the philosopher from the list and update S3 after successful email
-            logging.info("Email sent. Removing philosopher from s3 bucket...")
+            logger.info("Email sent. Removing philosopher from s3 bucket...")
             philosophers.remove(philosopher)
             update_in_s3(s3_philosophers_bucket_name, s3_philosophers_file_key, {"philosophers": philosophers})
-            logging.info("Philosopher removed.")
+            logger.info("Philosopher removed.")
             return {"statusCode": 200, "body": json.dumps("Emails sent and philosopher removed successfully!")}
         else:
             return {"statusCode": 500, "body": json.dumps("Failed to send emails")}
 
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return {"statusCode": 500, "body": json.dumps(f"Error: {e}")}

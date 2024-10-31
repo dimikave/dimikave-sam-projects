@@ -1,3 +1,4 @@
+../shared/auxiliary_tools/
 requests
 sendgrid
 daytime

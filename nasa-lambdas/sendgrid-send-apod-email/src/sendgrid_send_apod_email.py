@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 
 import boto3
 import requests
@@ -17,21 +16,13 @@ from sendgrid_apod_email_utils import (
 from sendgrid_email_templates import generate_email_template
 import sendgrid_apod_email_constants as c
 from sendgrid_apod_email_enumerations import GPTKeys, S3Keys
+from auxiliary_tools.environment_utils import EnvironmentUtils
 
 # Initialize S3 client
 s3 = boto3.client("s3")
 
-# TODO Add shared package for logger and GPT
-logger = logging.getLogger(__name__)
-# Ensure that the log level is set at the right level (in this case INFO)
-logger.setLevel(logging.INFO)
-
-# Add a handler only if none exist (this step may not be required, but it's good practice)
-if not logger.handlers:
-    handler = logging.StreamHandler()  # Logs to stdout (which Lambda captures and sends to CloudWatch)
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+# TODO Add shared package for GPT
+logger = EnvironmentUtils.get_logger()
 
 
 def generate_content_from_gpt4(prompt: str, model: str = c.GPT_MODEL, max_tokens: int = 100) -> str:
