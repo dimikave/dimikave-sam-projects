@@ -180,10 +180,13 @@ def lambda_handler(event, context):
 
         # Send the email via Sendgrid
         if send_email_sendgrid(sender, recipients, subject, html_body):
+            logger.info(c.SUCCESS_RESPONSE)
             return c.SUCCESS_RESPONSE
         else:
+            logger.error(c.FAILURE_RESPONSE)
             return c.FAILURE_RESPONSE
 
     except Exception as e:
         logger.error(f"Error: {e}")
+        logger.info(c.FAILURE_RESPONSE)
         return c.FAILURE_RESPONSE

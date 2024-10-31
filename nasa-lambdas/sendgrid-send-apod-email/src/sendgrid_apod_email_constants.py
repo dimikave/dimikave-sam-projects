@@ -31,4 +31,4 @@ FAILURE_RESPONSE = {"statusCode": 500, "body": json.dumps("Failed to send emails
 GPT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
 
 # GPT MODEL:
-GPT_MODEL = "gpt-4"
+GPT_MODEL = "gpt-4o-mini"
