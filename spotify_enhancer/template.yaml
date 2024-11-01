@@ -71,7 +71,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub post-playlist-additions-${Stage}
-      CodeUri: post-playlist-additions-api/src/
+      CodeUri: post_playlist_additions_api/src/
       Handler: post_playlist_additions.lambda_handler
       Environment:
         Variables:

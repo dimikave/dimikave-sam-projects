@@ -14,6 +14,7 @@ from auxiliary_tools.environment_utils import EnvironmentUtils
 s3 = boto3.client("s3")
 logger = EnvironmentUtils.get_logger()
 
+
 # Function to calculate the day counter starting from 2024-10-17
 def calculate_day_counter():
     start_date = datetime(2024, 10, 18)

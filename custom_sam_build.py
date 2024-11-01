@@ -12,13 +12,7 @@ def run_sam_build(service_name):
     # Change directory to the service path
     print(f"Changing directory to {service_path} and running 'sam build'...")
     try:
-        result = subprocess.run(
-            ["sam", "build"],
-            cwd=service_path,
-            capture_output=True,
-            text=True,
-            shell=True
-        )
+        result = subprocess.run(["sam", "build"], cwd=service_path, capture_output=True, text=True, shell=True)
         if result.returncode != 0:
             print(f"Error during 'sam build':\n{result.stderr}")
             sys.exit(1)
@@ -30,11 +24,7 @@ def run_sam_build(service_name):
 def install_local_package(package_path, target_dir):
     """Install a local package into the specified target directory from the root directory."""
     print(f"Running pip install for {package_path} into {target_dir} from the root directory...")
-    result = subprocess.run(
-        ["pip", "install", "-t", target_dir, "."+package_path],
-        capture_output=True,
-        text=True
-    )
+    result = subprocess.run(["pip", "install", "-t", target_dir, "." + package_path], capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error installing {package_path}:\n{result.stderr}")
         sys.exit(1)
@@ -55,7 +45,7 @@ def get_function_directory_mapping(build_dir):
     for resource_name, resource_details in template.get("Resources", {}).items():
         if resource_details.get("Type") == "AWS::Serverless::Function":
             lambda_name = resource_details["Properties"].get("Handler", "")
-            lambda_name = lambda_name.split(".")[0].replace("_", "-")
+            lambda_name = lambda_name.split(".")[0]
             print(lambda_name)
             print(resource_name)
             function_dir_mapping[lambda_name] = resource_name  # Map directory to resource name
@@ -94,6 +84,7 @@ def process_requirements(service_name, build_dir, function_dir_mapping):
                             install_local_package(package_path, target_dir)
             else:
                 print(f"No requirements.txt found in {lambda_dir / 'src'}, skipping.")
+
 
 def main():
     # Check for service name argument

@@ -27,7 +27,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub philosophy-otd-email-${Stage}
-      CodeUri: philosophy-otd-email/src/
+      CodeUri: philosophy_otd_email/src/
       Handler: philosophy_otd_email.lambda_handler
       Environment:
         Variables:

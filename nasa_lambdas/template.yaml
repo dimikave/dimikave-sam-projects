@@ -27,7 +27,7 @@ Resources:
 #    Type: AWS::Serverless::LayerVersion
 #    Properties:
 #      LayerName: SendgridSendApodEmailFunctionLayer
-#      Description: "A Lambda Layer for sendgrid-send-apod-email lambda"
+#      Description: "A Lambda Layer for sendgrid_send_apod_email lambda"
 #      ContentUri: ./layer/  # This points to the directory where the python dependencies are stored
 #      CompatibleRuntimes:
 #        - python3.12  # Make sure this matches your Lambda runtime
@@ -37,7 +37,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub sendgrid-send-apod-email-${Stage}
-      CodeUri: sendgrid-send-apod-email/src/
+      CodeUri: sendgrid_send_apod_email/src/
       Handler: sendgrid_send_apod_email.lambda_handler
 #      Layers:
 #        - !Ref SendgridSendApodEmailFunctionLayer

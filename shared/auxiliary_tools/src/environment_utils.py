@@ -4,6 +4,7 @@ from logging import Logger, getLogger
 
 from .environment_constants import EnvironmentConstants
 
+
 class EnvironmentUtils:
     """
     Utility methods for the environment of lambdas.
@@ -16,7 +17,7 @@ class EnvironmentUtils:
 
         :return: Logger: A logger object
         """
-        log_level = os.environ.get(EnvironmentConstants.LOG_LEVEL,EnvironmentConstants.LOG_LEVEL_DEFAULT)
+        log_level = os.environ.get(EnvironmentConstants.LOG_LEVEL, EnvironmentConstants.LOG_LEVEL_DEFAULT)
         logger = getLogger()
         logger.setLevel(log_level)
 
