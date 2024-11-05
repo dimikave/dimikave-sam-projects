@@ -44,8 +44,8 @@ Resources:
       Environment:
         Variables:
           NASA_API_KEY: '<NASA_API_KEY>'
-          SENDER_EMAIL: '<SENDER>'
-          OPENAI_API_KEY: '<OPENAI_API_KEY>'
+          SENDER_EMAIL: 'dimitris.kave@gmail.com'
+          OPENAI_API_KEY: '<OPEN_API_KEY>'
           SENDGRID_API_KEY: '<SENDGRID_API_KEY>'
           S3_BUCKET: 'sendgrid-recipients'  # Name of the S3 bucket where the recipients list is stored
           S3_FILE_KEY: 'recipients.json'  # Path to the file in S3 containing the recipient list
@@ -63,9 +63,34 @@ Resources:
               Resource:
                 - arn:aws:s3:::sendgrid-recipients/recipients.json  # Permissions for specific S3 object (recipients file)
 
-
   SendgridSendApodEmailFunctionCloudWatchLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/sendgrid-send-apod-email-${Stage}
+      RetentionInDays: 14
+
+  ApodInstagramCommentResponderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub apod-instagram-comment-responder-${Stage}
+      CodeUri: apod_instagram_comment_responder/src/
+      Handler: apod_instagram_comment_responder.lambda_handler
+      Environment:
+        Variables:
+          INSTAGRAM_ACC_ID: '<INSTA_ACC_ID>'
+          OPENAI_API_KEY: '<OPENAI_API_KEY>'
+          VERIFY_TOKEN: '<FACEBOOK_ACCESS_TOKEN>'
+          TIME_THRESHOLD: 15
+      Events:
+        CommentRespondEvent:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0/15 * * * ? *)
+      Policies:
+        - AWSLambdaBasicExecutionRole
+
+  ApodInstagramCommentResponderFunctionCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/apod-instagram-comment-responder-${Stage}
       RetentionInDays: 14

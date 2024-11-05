@@ -16,6 +16,7 @@ __pycache__/
 config.yml
 secrets.yaml
 tools_to_check.md
+nasa_lambdas/SocialMediaTools.md
 
 *.local
 *.tmp
